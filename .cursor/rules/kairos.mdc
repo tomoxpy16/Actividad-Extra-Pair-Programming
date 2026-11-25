@@ -1,0 +1,12 @@
+---
+description: Reglas de arquitectura de Kairos para el orquestador en Python
+globs: orchestrator/**/*.py
+alwaysApply: false
+---
+
+- Lee y respeta `AGENTS.md`.
+- Un agente = una responsabilidad. Firma `run(tasks, now) -> (tasks, events)`.
+- No importes `sqlalchemy`, `fastapi` ni `httpx` dentro de `app/agents` o `app/domain`.
+- Si usas `LLMProvider`, captura `LLMUnavailable` y degrada a reglas.
+- Antes de implementar, propone o escribe la prueba en `orchestrator/tests/`.
+- Mantén los diffs pequeños y explica el porqué.
