@@ -1,0 +1,10 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+sqlalchemy>=2.0.30
+psycopg[binary]>=3.2
+langgraph>=0.2
+httpx>=0.27
+anthropic
+tzdata
+pytest>=8
