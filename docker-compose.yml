@@ -1,0 +1,80 @@
+name: kairos
+
+x-orchestrator-env: &orchestrator-env
+  DATABASE_URL: postgresql+psycopg://kairos:kairos@db:5432/kairos
+  KAIROS_TZ: ${KAIROS_TZ:-America/Bogota}
+  LLM_PROVIDER: ${LLM_PROVIDER:-rules}          # rules | ollama | anthropic
+  OLLAMA_URL: http://ollama:11434
+  OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+  ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-5-5}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  MONITOR_INTERVAL_SECONDS: ${MONITOR_INTERVAL_SECONDS:-15}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kairos
+      POSTGRES_PASSWORD: kairos
+      POSTGRES_DB: kairos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kairos -d kairos"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  orchestrator:
+    build: ./orchestrator
+    image: kairos/orchestrator:1.0
+    environment: *orchestrator-env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"            # Swagger UI en http://localhost:8000/docs
+    networks: [backend, frontend]
+    restart: unless-stopped
+
+  monitor:
+    build: ./orchestrator      # misma imagen que la API, distinto proceso
+    image: kairos/orchestrator:1.0
+    command: ["python", "-m", "app.worker"]
+    environment: *orchestrator-env
+    healthcheck:
+      disable: true
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    networks: [backend]
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    image: kairos/web:1.0
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    ports:
+      - "8080:80"              # UI en http://localhost:8080
+    networks: [frontend]
+    restart: unless-stopped
+
+  # Opcional: LLM local. Activar con  docker compose --profile llm up -d
+  # y luego  docker compose exec ollama ollama pull qwen2.5:3b
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    volumes:
+      - ollama:/root/.ollama
+    networks: [backend]
+
+volumes:
+  pgdata:
+  ollama:
+
+networks:
+  backend:
+  frontend:
