@@ -1,0 +1,55 @@
+@startuml paquetes-orchestrator
+title Diagrama de paquetes UML - componente orchestrator (API) y monitor
+skinparam packageStyle folder
+skinparam linetype ortho
+
+package "app" {
+  [main\n<<composition root>>] as main
+  [config] as config
+  [worker\n<<proceso monitor>>] as worker
+
+  package "app.api" as api {
+    [routes]
+  }
+  package "app.orchestration" as orchestration {
+    [orchestrator]
+    [graph]
+  }
+  package "app.agents" as agents {
+    [base]
+    [intake]
+    [prioritizer]
+    [scheduler]
+    [monitor]
+    [coach]
+  }
+  package "app.domain" as domain {
+    [models]
+    [clock]
+  }
+  package "app.infrastructure" as infrastructure {
+    [db]
+    [repository]
+    [llm]
+  }
+}
+
+main ..> api : <<import>>
+main ..> orchestration : <<import>>
+main ..> infrastructure : <<import>>
+main ..> config : <<import>>
+worker ..> main : <<import>>
+api ..> orchestration : <<import>>
+orchestration ..> agents : <<import>>
+orchestration ..> infrastructure : <<import>>
+orchestration ..> domain : <<import>>
+agents ..> domain : <<import>>
+agents ..> llm : <<import>>
+repository ..> domain : <<import>>
+repository ..> db : <<import>>
+
+note bottom of domain
+  Nucleo sin dependencias:
+  objetos de dominio puros
+end note
+@enduml
