@@ -1,0 +1,40 @@
+@startuml c4-6-despliegue
+!include <C4/C4_Deployment>
+title Kairos - Diagrama de despliegue (Docker Compose)
+
+Deployment_Node(client, "Equipo del usuario", "Windows / macOS / Linux") {
+  Deployment_Node(browser, "Navegador", "Chrome / Edge / Firefox") {
+    Container(spa, "Kairos UI", "HTML/CSS/JS", "Consulta /api/state cada 3 s")
+  }
+}
+Deployment_Node(host, "Host Docker", "Docker Engine 28 + Compose v2") {
+  Deployment_Node(net_f, "Red frontend", "bridge") {
+    Deployment_Node(cweb, "kairos-web-1", "nginx:1.27-alpine, puerto 8080->80") {
+      Container(web, "Web + Proxy", "Nginx")
+    }
+  }
+  Deployment_Node(net_b, "Red backend", "bridge") {
+    Deployment_Node(capi, "kairos-orchestrator-1", "python:3.12-slim, puerto 8000 (tambien en red frontend)") {
+      Container(api, "Orchestrator API", "Uvicorn + FastAPI + LangGraph")
+    }
+    Deployment_Node(cmon, "kairos-monitor-1", "python:3.12-slim") {
+      Container(mon, "Monitor Worker", "python -m app.worker")
+    }
+    Deployment_Node(cdb, "kairos-db-1", "postgres:16-alpine, volumen pgdata") {
+      ContainerDb(db, "PostgreSQL", "tasks, agent_events, settings")
+    }
+    Deployment_Node(cllm, "kairos-ollama-1 (perfil llm)", "ollama/ollama, volumen ollama") {
+      Container(ollama, "Ollama", "qwen2.5:3b")
+    }
+  }
+}
+System_Ext(anthropic, "Anthropic API", "api.anthropic.com")
+
+Rel(spa, web, "HTTP", ":8080")
+Rel(web, api, "proxy /api", ":8000")
+Rel(api, db, "SQL", ":5432")
+Rel(mon, db, "SQL", ":5432")
+Rel(api, ollama, "HTTP", ":11434")
+Rel(api, anthropic, "HTTPS", ":443")
+SHOW_LEGEND()
+@enduml

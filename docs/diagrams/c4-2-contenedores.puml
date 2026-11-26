@@ -1,0 +1,21 @@
+@startuml c4-2-contenedores
+!include <C4/C4_Container>
+title Kairos - Diagrama de contenedores (C4 nivel 2)
+
+Person(user, "Usuario", "Usa Kairos desde el navegador")
+System_Boundary(k, "Kairos") {
+  Container(web, "Web App + Proxy", "Nginx 1.27, HTML/CSS/JS", "Sirve la interfaz y redirige /api al orquestador")
+  Container(api, "Orchestrator API", "Python 3.12, FastAPI, LangGraph", "Casos de uso: planificar, replanificar, acciones sobre tareas, reloj simulado. Contiene los 5 agentes")
+  Container(mon, "Monitor Worker", "Python 3.12 (misma imagen)", "Ejecuta el MonitorAgent cada N segundos y dispara la replanificacion")
+  ContainerDb(db, "Estado compartido (pizarra)", "PostgreSQL 16", "tasks, agent_events, settings")
+}
+System_Ext(llm, "Proveedor LLM", "Anthropic Claude u Ollama (opcional)")
+
+Rel(user, web, "Usa", "HTTP :8080")
+Rel(web, api, "Proxy /api/*", "HTTP/JSON :8000")
+Rel(api, db, "Lee / escribe (advisory lock)", "SQL")
+Rel(mon, db, "Lee / escribe (advisory lock)", "SQL")
+Rel(api, llm, "Prompts con esquema JSON", "HTTPS")
+Rel(mon, llm, "Mensajes del CoachAgent", "HTTPS")
+SHOW_LEGEND()
+@enduml
