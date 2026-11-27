@@ -1,32 +1,7 @@
 // Kairos — cliente web sin dependencias. Consulta el estado compartido cada 3 s.
 const API = "/api";
 
-// Íconos de trazo (24x24) dibujados para Kairos.
-const ICON = {
-  orchestrator: '<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M12 11.5 6.5 17M12 11.5l5.5 5.5"/>',
-  intake: '<path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 15 3 3 3-3M19 18v-7"/>',
-  prioritizer: '<path d="M12 4v16M5 8h14"/><path d="m5 8-3 6a3 3 0 0 0 6 0zM19 8l-3 6a3 3 0 0 0 6 0z"/>',
-  scheduler: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/>',
-  monitor: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
-  coach: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/>',
-  play: '<path d="M7 5v14l11-7z"/>',
-  check: '<path d="m5 12 5 5 9-10"/>',
-  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
-  pin: '<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/>',
-  list: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
-  done: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
-  run: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z"/>',
-  alert: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
-  rotate: '<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5"/>',
-  estudio: '<path d="M2 6l10-3 10 3-10 3z"/><path d="M6 8v5c0 1.5 2.7 3 6 3s6-1.5 6-3V8"/>',
-  trabajo: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2M3 12h18"/>',
-  salud: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
-  hogar: '<path d="M3 11 12 4l9 7M5 10v10h14V10"/>',
-  personal: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-  otro: '<circle cx="12" cy="12" r="3"/>',
-};
+// Los íconos (Lucide) vienen de icons.js, que se carga antes que este archivo.
 const svg = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[name] || ICON.otro}</svg>`;
 
 const AGENTS = {
@@ -55,6 +30,8 @@ const weekday = (iso) => dateOf(iso).toLocaleDateString("es-CO", { weekday: "sho
 const dayKey = (iso) => iso.slice(0, 10);
 let lastEventId = 0;
 let busy = false;
+let lastPlanSig = "";
+let lastTimelineHtml = "";
 
 async function call(path, options = {}) {
   const res = await fetch(API + path, { headers: { "Content-Type": "application/json" }, ...options });
@@ -140,7 +117,7 @@ function blockHtml(t) {
     buttons += `<button class="act ok" data-act="complete" data-id="${t.id}" title="Completar" aria-label="Completar">${svg("check")}</button>`;
   if (t.status !== "done")
     buttons += `<button class="act del" data-act="delete" data-id="${t.id}" title="Eliminar" aria-label="Eliminar">${svg("trash")}</button>`;
-  return `<div class="block ${q} ${t.status}">
+  return `<div class="block ${q} ${t.status}" style="view-transition-name: t-${t.id}">
       <div class="time">${time}</div>
       <div class="dot"></div>
       <div class="task">
@@ -154,7 +131,7 @@ function blockHtml(t) {
     </div>`;
 }
 
-const nowLine = (now) => `<div class="now-line"><span>${hm(now)}</span><b></b><em></em></div>`;
+const nowLine = (now) => `<div class="now-line" style="view-transition-name: now-line"><span>${hm(now)}</span><b></b><em></em></div>`;
 
 function dayTitle(key, today) {
   const d = new Date(key + "T12:00:00");
@@ -167,8 +144,8 @@ function dayTitle(key, today) {
 function renderTimeline(state) {
   const tasks = state.tasks;
   if (!tasks.length) {
-    $("#timeline").innerHTML = `<div class="empty"><img src="logo.svg" alt=""><b>Tu día todavía está en blanco</b>
-      Escribe tus pendientes arriba o prueba un ejemplo. Los agentes harán el resto.</div>`;
+    swapTimeline(`<div class="empty"><img src="logo.svg" alt=""><b>Tu día todavía está en blanco</b>
+      Escribe tus pendientes arriba o prueba un ejemplo. Los agentes harán el resto.</div>`, "");
     return;
   }
   const open = tasks.filter((t) => t.status !== "done" && t.scheduled_start)
@@ -193,7 +170,19 @@ function renderTimeline(state) {
   }
   if (unscheduled.length) html += `<div class="day"><div class="day-head"><h3>Sin franja</h3><span>no cupieron en el horizonte</span></div><div class="blocks">${unscheduled.map(blockHtml).join("")}</div></div>`;
   if (done.length) html += `<div class="day"><div class="day-head"><h3>Completadas</h3><span>${done.length}</span></div><div class="blocks">${done.map(blockHtml).join("")}</div></div>`;
-  $("#timeline").innerHTML = html;
+  const sig = tasks.map((t) => `${t.id}|${t.scheduled_start}|${t.status}|${t.delay_count}`).join(";");
+  swapTimeline(html, sig);
+}
+
+// Anima el cronograma (View Transitions API) solo cuando el plan cambia de verdad:
+// las tareas se deslizan a su nueva hora en lugar de "saltar". Sin soporte, se actualiza normal.
+function swapTimeline(html, sig) {
+  if (html === lastTimelineHtml) return;
+  const update = () => { $("#timeline").innerHTML = html; lastTimelineHtml = html; };
+  const animate = lastPlanSig && sig !== lastPlanSig && document.startViewTransition
+    && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  lastPlanSig = sig;
+  if (animate) document.startViewTransition(update); else update();
 }
 
 function renderEvents(events) {
@@ -228,6 +217,7 @@ async function refresh() {
 }
 
 // ------------------------------------------------------------------ eventos UI
+document.querySelectorAll("[data-icon]").forEach((el) => (el.outerHTML = svg(el.dataset.icon)));
 $("#agent-legend").innerHTML = Object.values(AGENTS)
   .map((a) => `<span class="agent-chip"><i style="background:${a.color}"></i>${a.label}</span>`).join("");
 $("#examples").innerHTML = EXAMPLES.map((ex, i) => `<button type="button" class="chip" data-example="${i}">${ex.label}</button>`).join("");
