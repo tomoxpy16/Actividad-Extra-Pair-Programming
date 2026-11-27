@@ -1,0 +1,26 @@
+@startuml c4-5-dinamico-replanificar
+!include <C4/C4_Dynamic>
+title Flujo dinamico 2 - Retraso detectado y replanificacion automatica
+
+Container(mon, "Monitor Worker", "Python")
+Container_Boundary(core, "Nucleo de orquestacion (en proceso)") {
+  Component(orch, "Orchestrator")
+  Component(monitor, "MonitorAgent")
+  Component(prio, "PrioritizerAgent")
+  Component(sched, "SchedulerAgent")
+  Component(coach, "CoachAgent")
+}
+ContainerDb(db, "PostgreSQL")
+Container(web, "Web App")
+Person(user, "Usuario")
+
+Rel(mon, orch, "monitor_tick() cada 15 s")
+Rel(orch, db, "lock + cargar tareas + desfase del reloj")
+Rel(orch, monitor, "tareas no iniciadas o pasadas de tiempo?")
+Rel(orch, prio, "re-puntuar (bono por retraso)")
+Rel(orch, sched, "reubicar desde ahora; marcar riesgo")
+Rel(orch, coach, "mensaje + siguiente paso")
+Rel(orch, db, "guardar plan + eventos")
+Rel(web, orch, "GET /api/state -> snapshot()")
+Rel(web, user, "Muestra plan reorganizado y bitacora")
+@enduml

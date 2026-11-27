@@ -1,0 +1,40 @@
+@startuml c4-3-componentes
+!include <C4/C4_Component>
+title Orchestrator API - Diagrama de componentes (C4 nivel 3)
+
+Container(web, "Web App", "Nginx")
+Container(mon, "Monitor Worker", "Python")
+ContainerDb(db, "Estado compartido", "PostgreSQL")
+System_Ext(llm, "Proveedor LLM", "Claude / Ollama")
+
+Container_Boundary(api, "Orchestrator API") {
+  Component(routes, "API Router", "FastAPI + Pydantic", "Valida HTTP y delega en casos de uso")
+  Component(orch, "Orchestrator", "Fachada + Unit of Work", "Carga estado, elige ruta, ejecuta el grafo y persiste")
+  Component(graph, "Grafo de agentes", "LangGraph StateGraph", "KairosState compartido; rutas plan / replan / monitor")
+  Component(intake, "IntakeAgent", "LLM + reglas", "Lenguaje natural -> tareas")
+  Component(prio, "PrioritizerAgent", "Determinista", "Puntaje 0-100 + cuadrante Eisenhower + explicacion")
+  Component(sched, "SchedulerAgent", "Greedy", "Cronograma sin solapes; riesgo de incumplimiento")
+  Component(monitor, "MonitorAgent", "Determinista", "Detecta no iniciadas y sobrecostos")
+  Component(coach, "CoachAgent", "LLM + plantilla", "Siguiente paso concreto")
+  Component(llmp, "LLMProvider", "Strategy: Null / Ollama / Anthropic", "Abstraccion del modelo")
+  Component(repo, "Repository", "SQLAlchemy 2.0", "Filas <-> dominio; pg_advisory_xact_lock")
+  Component(clock, "Clock", "Reloj inyectable", "Hora real + desfase simulado compartido")
+}
+
+Rel(web, routes, "JSON", "HTTP")
+Rel(mon, orch, "monitor_tick()", "en proceso")
+Rel(routes, orch, "usa")
+Rel(orch, graph, "invoke(state)")
+Rel(orch, repo, "carga / guarda")
+Rel_R(orch, clock, "now()")
+Rel(graph, intake, "nodo intake")
+Rel(graph, prio, "nodo prioritize")
+Rel(graph, sched, "nodo schedule")
+Rel(graph, monitor, "nodo monitor")
+Rel(graph, coach, "nodo coach")
+Rel(intake, llmp, "complete_json()")
+Rel(coach, llmp, "complete_text()")
+Rel(llmp, llm, "HTTPS")
+Rel(repo, db, "SQL")
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,30 @@
+@startuml paquetes-web-db
+title Diagrama de paquetes UML - componentes web y base de datos
+skinparam packageStyle folder
+
+package "web (contenedor nginx)" as web {
+  [nginx.conf\nproxy /api -> orchestrator:8000] as conf
+  [index.html] as html
+  [styles.css] as css
+  package "app.js" as js {
+    [cliente API\ncall(), action()] as apic
+    [render\nrenderTimeline, renderEvents, renderStats] as render
+    [controladores UI\nformulario, botones] as ui
+  }
+}
+
+package "db (PostgreSQL)" as dbpkg {
+  package "schema public" {
+    [tasks] as tasks
+    [agent_events] as events
+    [settings] as settings
+  }
+}
+
+html ..> css : <<use>>
+html ..> js : <<use>>
+ui ..> apic
+ui ..> render
+apic ..> conf : HTTP /api
+conf ..> tasks : (via orchestrator)
+@enduml

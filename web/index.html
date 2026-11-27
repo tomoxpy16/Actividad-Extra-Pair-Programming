@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kairos · Tu día, en el momento oportuno</title>
+  <meta name="description" content="Orquestador multiagente de productividad: escribe tus pendientes y los agentes los priorizan, agendan y replanifican.">
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="logo.svg" alt="" class="logo" width="40" height="40">
+    <div>
+      <h1>Kairos</h1>
+      <p>Tu día, en el momento oportuno</p>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="clock" id="clock-box" title="Reloj compartido entre la API y el MonitorAgent">
+      <span class="clock-time" id="clock">--:--</span>
+      <span class="clock-meta" id="clock-meta">reloj real</span>
+    </div>
+    <span class="pill" id="provider" title="Motor del IntakeAgent y el CoachAgent">—</span>
+    <div class="segmented" role="group" aria-label="Simular el paso del tiempo">
+      <span class="segmented-label">Simular</span>
+      <button class="seg" data-advance="30" title="Simula que pasan 30 minutos">+30 min</button>
+      <button class="seg" data-advance="120" title="Simula que pasan 2 horas">+2 h</button>
+    </div>
+    <button class="btn" id="replan" title="Volver a priorizar y agendar">
+      <span data-icon="replan"></span>
+      Replanificar
+    </button>
+    <button class="btn icon danger" id="reset" title="Reiniciar la demo" aria-label="Reiniciar">
+      <span data-icon="trash"></span>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="col-main">
+    <form class="card composer" id="plan-form">
+      <div class="composer-head">
+        <label for="text">¿Qué tienes que hacer?</label>
+        <span class="hint">Escríbelo como se lo dirías a alguien. Los agentes lo convierten en un plan.</span>
+      </div>
+      <textarea id="text" rows="3" placeholder="Hoy tengo reunión con el equipo a las 3 pm, debo terminar el informe antes de las 6 que es muy importante, ir al gimnasio una hora y llamar a mi mamá"></textarea>
+      <div class="composer-foot">
+        <div class="chips">
+          <span class="chips-label">Probar con:</span>
+          <span id="examples"></span>
+        </div>
+        <div class="submit">
+          <kbd>Ctrl</kbd><kbd>Enter</kbd>
+          <button type="submit" class="btn primary" id="plan-btn">
+            <span data-icon="sparkles"></span>
+            Planificar
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div class="stats" id="stats"></div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Cronograma</h2>
+        <div class="legend">
+          <span class="q q1">Hacer ahora</span><span class="q q2">Planificar</span>
+          <span class="q q3">Hacer rápido</span><span class="q q4">Si sobra tiempo</span>
+        </div>
+      </div>
+      <div id="timeline" class="timeline"></div>
+    </section>
+  </section>
+
+  <aside class="col-side">
+    <section class="card agents">
+      <div class="card-head">
+        <h2>Actividad de los agentes</h2>
+        <span class="muted" id="event-count"></span>
+      </div>
+      <div class="agent-legend" id="agent-legend"></div>
+      <ol id="events" class="events"></ol>
+    </section>
+  </aside>
+</main>
+
+<footer class="footer">
+  Kairos · orquestador multiagente · Arquitectura de Software, Pontificia Universidad Javeriana
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="icons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

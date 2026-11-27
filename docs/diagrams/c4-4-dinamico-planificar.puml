@@ -1,0 +1,27 @@
+@startuml c4-4-dinamico-planificar
+!include <C4/C4_Dynamic>
+title Flujo dinamico 1 - Planificar desde lenguaje natural
+
+Person(user, "Usuario")
+Container(web, "Web App", "Nginx + JS")
+Container_Boundary(api, "Orchestrator API") {
+  Component(routes, "API Router", "FastAPI")
+  Component(orch, "Orchestrator", "Fachada")
+  Component(intake, "IntakeAgent")
+  Component(prio, "PrioritizerAgent")
+  Component(sched, "SchedulerAgent")
+  Component(coach, "CoachAgent")
+}
+ContainerDb(db, "PostgreSQL")
+
+Rel(user, web, "Escribe pendientes y pulsa Planificar")
+Rel(web, routes, "POST /api/plan {text}")
+Rel(routes, orch, "plan(text)")
+Rel(orch, db, "BEGIN + pg_advisory_xact_lock + cargar tareas")
+Rel(orch, intake, "texto -> tareas (LLM o reglas)")
+Rel(orch, prio, "puntaje + cuadrante")
+Rel(orch, sched, "asignar franjas")
+Rel(orch, coach, "siguiente paso")
+Rel(orch, db, "guardar tareas + eventos; COMMIT")
+Rel(web, routes, "GET /api/state (cada 3 s)")
+@enduml

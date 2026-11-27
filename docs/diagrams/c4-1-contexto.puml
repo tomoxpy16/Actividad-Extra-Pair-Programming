@@ -1,0 +1,15 @@
+@startuml c4-1-contexto
+!include <C4/C4_Context>
+title Kairos - Diagrama de contexto (C4 nivel 1)
+LAYOUT_LEFT_RIGHT()
+
+Person(user, "Usuario", "Estudiante o profesional que quiere organizar su tiempo")
+System(kairos, "Kairos", "Orquestador multiagente: entiende pendientes en lenguaje natural, prioriza, agenda, vigila retrasos y replanifica")
+System_Ext(anthropic, "Anthropic API", "Modelos Claude (opcional)")
+System_Ext(ollama, "Ollama", "LLM local de pesos abiertos (opcional)")
+
+Rel(user, kairos, "Escribe pendientes, inicia y completa tareas, consulta su plan", "HTTP")
+Rel(kairos, anthropic, "Extrae tareas / redacta mensajes", "HTTPS + JSON Schema")
+Rel(kairos, ollama, "Extrae tareas / redacta mensajes", "HTTP + JSON")
+SHOW_LEGEND()
+@enduml
