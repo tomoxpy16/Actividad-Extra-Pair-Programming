@@ -58,3 +58,20 @@ def test_detecta_tarea_no_iniciada_y_sobrecosto():
     _, delays, _ = MonitorAgent().run([pending, running], NOW)
     assert {d["type"] for d in delays} == {"not_started", "overrun"}
     assert pending.delay_count == running.delay_count == 1
+
+
+def test_mensajes_con_dia_en_espanol():
+    t = Task("Informe", estimated_minutes=120, deadline=NOW + timedelta(hours=1), priority_score=80)
+    _, events = SchedulerAgent(SETTINGS).run([t], NOW)
+    text = " ".join(e.message for e in events)
+    assert "mié" in text
+    assert "Wed" not in text
+
+
+def test_avisa_si_dos_citas_de_hora_fija_se_cruzan():
+    a = Task("Reunión", estimated_minutes=60, fixed_start=NOW.replace(hour=10))
+    b = Task("Dentista", estimated_minutes=30, fixed_start=NOW.replace(hour=10, minute=30))
+    _, events = SchedulerAgent(SETTINGS).run([a, b], NOW)
+    assert a.scheduled_start == NOW.replace(hour=10)
+    assert b.scheduled_start == NOW.replace(hour=10, minute=30)
+    assert any("se cruza con «Reunión»" in e.message and e.kind == "warning" for e in events)

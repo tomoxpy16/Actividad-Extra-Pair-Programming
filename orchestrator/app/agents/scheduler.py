@@ -15,6 +15,12 @@ from app.agents.base import Agent
 from app.domain.models import AgentEvent, Task, TaskStatus, WorkSettings
 
 FAR_FUTURE = datetime.max.replace(year=9000)
+DAYS_ES = ("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
+
+
+def fmt_day(dt: datetime) -> str:
+    """'mié 15:00'. No usa %a porque depende del locale (en el contenedor sale en inglés)."""
+    return f"{DAYS_ES[dt.weekday()]} {dt:%H:%M}"
 
 
 def ceil_to_5(dt: datetime) -> datetime:
@@ -62,6 +68,7 @@ class SchedulerAgent(Agent):
         before = {t.id: t.scheduled_start for t in tasks}
         risk_before = {t.id: t.at_risk for t in tasks}
         busy: list[tuple[datetime, datetime]] = []
+        anchored: list[tuple[datetime, datetime, Task]] = []  # en curso y hora fija, para detectar cruces
         cursor = ceil_to_5(now)
 
         # 1) en curso
@@ -73,6 +80,7 @@ class SchedulerAgent(Agent):
                     end = cursor + timedelta(minutes=max(10, min(30, t.estimated_minutes // 4)))
                 t.scheduled_start, t.scheduled_end = start, end
                 busy.append((start, end))
+                anchored.append((start, end, t))
 
         # 2) hora fija
         flexible: list[Task] = []
@@ -84,7 +92,14 @@ class SchedulerAgent(Agent):
                     t.scheduled_start = t.fixed_start
                     t.scheduled_end = t.fixed_start + timedelta(minutes=t.estimated_minutes)
                     t.status = TaskStatus.SCHEDULED
+                    other = next((o for s, e, o in anchored if t.scheduled_start < e and t.scheduled_end > s), None)
+                    if other is not None:
+                        events.append(self.event(
+                            f"«{t.title}» ({fmt_day(t.scheduled_start)}) se cruza con «{other.title}». "
+                            "Las dos tienen hora fija o están en curso: revisa cuál mover.",
+                            "warning", {"task_id": t.id, "clash_with": other.id}))
                     busy.append((t.scheduled_start, t.scheduled_end))
+                    anchored.append((t.scheduled_start, t.scheduled_end, t))
                     continue
                 events.append(self.event(f"La hora fija de «{t.title}» ya pasó; la trato como tarea flexible.", "warning"))
                 t.fixed_start = None
@@ -114,7 +129,7 @@ class SchedulerAgent(Agent):
             t.at_risk = bool(t.deadline and t.scheduled_end and t.scheduled_end > t.deadline)
             if t.at_risk and not risk_before.get(t.id):
                 events.append(self.event(
-                    f"«{t.title}» terminaría {t.scheduled_end:%a %H:%M} y vence {t.deadline:%a %H:%M}: "
+                    f"«{t.title}» terminaría {fmt_day(t.scheduled_end)} y vence {fmt_day(t.deadline)}: "
                     "está en riesgo. Considera recortarla o mover otra tarea.", "warning", {"task_id": t.id}))
 
         planned = [t for t in tasks if t.status in (TaskStatus.SCHEDULED, TaskStatus.IN_PROGRESS) and t.scheduled_start]
@@ -122,7 +137,7 @@ class SchedulerAgent(Agent):
         if planned:
             first = min(t.scheduled_start for t in planned)
             last = max(t.scheduled_end for t in planned)
-            msg = f"Cronograma listo: {len(planned)} bloque(s) entre {first:%a %H:%M} y {last:%a %H:%M}."
+            msg = f"Cronograma listo: {len(planned)} bloque(s) entre {fmt_day(first)} y {fmt_day(last)}."
             if moved:
                 msg += f" Moví {len(moved)} tarea(s) respecto al plan anterior."
             events.append(self.event(msg, "success", {"moved": [t.id for t in moved]}))
