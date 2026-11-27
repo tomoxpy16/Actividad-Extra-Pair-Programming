@@ -450,7 +450,7 @@ erDiagram
 | 004 | Prioridad y agenda **deterministas** | Pedírselas al LLM | Explicables, comprobables con pruebas y sin alucinaciones aritméticas |
 | 005 | **Monitor en contenedor aparte** | Tarea en segundo plano dentro de la API | Aislamiento de fallos y escalado independiente. La API sigue sin estado. |
 | 006 | **Reloj con desfase compartido** | Esperar tiempo real | Permite demostrar retrasos en vivo (`+30 min`, `+2 h`) de forma reproducible |
-| 007 | UI sin framework | React/Vue | El foco del curso es la arquitectura. Cero pasos de build. |
+| 007 | UI sin framework | React/Vue | El foco del curso es la arquitectura. Cero pasos de build. Las fuentes (Inter) y los íconos (Lucide) se sirven desde el contenedor, sin CDN, así que la UI funciona sin internet. Las animaciones usan una API nativa del navegador (View Transitions). |
 
 ---
 

@@ -59,7 +59,7 @@ Hay dos "stacks": el **de trabajo** (herramientas de pair programming con IA) y 
 | **PostgreSQL 16** | Estado compartido (pizarra) | Base de datos más usada por desarrolladores en las encuestas de SO de 2023 a 2025 |
 | **Docker / Docker Compose** | Empaquetado y despliegue | Prácticamente universal. SO 2025 reporta el mayor salto de uso entre todas las tecnologías. |
 | **Nginx** | Servidor web y proxy inverso | Uno de los servidores web más desplegados |
-| **HTML/CSS/JS sin framework** | Interfaz | Universal. Se eligió sin framework para que el foco sea la arquitectura. |
+| **HTML/CSS/JS sin framework** | Interfaz | Universal. Se eligió sin framework para que el foco sea la arquitectura. La tipografía Inter y los íconos Lucide se sirven desde el propio contenedor, sin CDN. |
 | **Ollama / Anthropic API** | LLM local u en la nube (opcional) | Ollama es la forma más popular de correr LLM locales. Las APIs de LLM ya son parte del stack de cualquier producto con IA. |
 
 **Conclusión:** salvo LangGraph, que es especializado, todo el stack es **mainstream**. Es fácil de mantener, de contratar y de enseñar.
@@ -87,7 +87,7 @@ Atributos basados en ISO/IEC 25010 y Bass, Clements & Kazman (*Software Architec
 | Atributo | PP | PP-IA | AG | VC | NC | Táctica concreta en Kairos |
 |---|---|---|---|---|---|---|
 | **Mantenibilidad / modificabilidad** | ✅ Dos personas entienden el código | ✅/⚠️ Alta si se revisa; baja si se acepta sin leer | ⚠️ Cambios grandes difíciles de revisar | ❌ Nadie conoce el código | ⚠️ Atado a la plataforma | Capas (`api`, `orchestration`, `agents`, `domain`, `infrastructure`), dominio puro y agentes desacoplados |
-| **Testabilidad** | ✅ TDD ping-pong | ✅ La IA genera pruebas rápido | ✅ El agente usa las pruebas para verificarse | ❌ Rara vez hay pruebas | ❌ Pruebas limitadas | Agentes como funciones puras: 26 pruebas sin BD ni LLM (`tests/`) y `FixedClock` |
+| **Testabilidad** | ✅ TDD ping-pong | ✅ La IA genera pruebas rápido | ✅ El agente usa las pruebas para verificarse | ❌ Rara vez hay pruebas | ❌ Pruebas limitadas | Agentes como funciones puras: 28 pruebas sin BD ni LLM (`tests/`) y `FixedClock` |
 | **Confiabilidad / disponibilidad** | ✅ | ⚠️ | ⚠️ Depende del proveedor del LLM | ❌ | ✅ La plataforma gestiona la infraestructura | **Degradación elegante**: si el LLM falla, se usan reglas. Reintentos al conectar a la BD. Health checks. `restart: unless-stopped`. |
 | **Seguridad** | ✅ Cuatro ojos | ⚠️ Riesgo de código vulnerable o secretos en prompts | ⚠️ Permisos y *prompt injection* | ❌ Riesgo alto (datos expuestos) | ⚠️ Depende del proveedor | Usuario no-root en el contenedor, red `backend` aislada, secretos por variables de entorno, validación con Pydantic, HTML escapado en la UI |
 | **Desempeño** | ➖ | ⚠️ El código de la IA puede ser ineficiente | ⚠️ Latencia y costo de tokens | ❌ | ⚠️ Techo de la plataforma | El LLM solo donde aporta (lenguaje). Las prioridades y la agenda son algoritmos deterministas O(n log n). |
